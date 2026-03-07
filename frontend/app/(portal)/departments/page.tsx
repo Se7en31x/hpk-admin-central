@@ -3,19 +3,18 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Package, Pill, FileText, ArrowRightLeft, HeartHandshake, ShieldCheck,
-  Shield, Loader2, Lock,
-  ArrowRight
+  Package, Pill, ArrowRightLeft, HeartHandshake, ShieldCheck,
+  Shield, Loader2, Lock, ArrowRight, Stethoscope, Activity
 } from 'lucide-react';
 
 /* ======================= SSO CONFIG ======================= */
 
-const AUTH0_DOMAIN = "https://dev-715pz24cat16heal.us.auth0.com";
+const AUTH0_DOMAIN = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
 
 const CLIENTS = {
   PORTAL: {
-    id: "CLIENT_ID_ADMIN_CENTRAL", 
-    callback: "http://localhost:3000" 
+    id: "CLIENT_ID_ADMIN_CENTRAL",
+    callback: "http://localhost:3000"
   },
   WAREHOUSE: {
     id: "CLIENT_ID_WAREHOUSE_GROUP",
@@ -27,25 +26,28 @@ const CLIENTS = {
   },
   CHEEWABHIBALN: {
     id: "CLIENT_ID_CHEEWABHIBALN_APP",
-    callback: "http://localhost:3005/auth/callback"
+    callback: "http://localhost:3003/auth/callback"
   }
 };
 
 const SYSTEMS_MAP: Record<string, { client: typeof CLIENTS[keyof typeof CLIENTS], path: string }> = {
   "01": { client: CLIENTS.WAREHOUSE, path: "/dashboard" },      // คลังหลัก
-  "03": { client: CLIENTS.WAREHOUSE, path: "/purchase" },       // จัดซื้อ
   "04": { client: CLIENTS.WAREHOUSE, path: "/borrow-return" },  // เบิกยืมคืน
-  "02": { client: CLIENTS.PHARMACY, path: "/dispense" },       // จ่ายยา
+  "02": { client: CLIENTS.PHARMACY, path: "/dispense" },        // จ่ายยา
   "05": { client: CLIENTS.CHEEWABHIBALN, path: "/palliative-care" },// ชีวาภิบาล
+  "07": { client: CLIENTS.PORTAL, path: "/opd-dashboard" },     // ผู้ป่วยนอก (OPD)
+  "06": { client: CLIENTS.PORTAL, path: "/dental-clinic" },     // ทันตกรรม
 };
+
 /* ======================= UI DATA ======================= */
 
 const departments = [
   { label: 'คลังหลัก', department_code: '01', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
   { label: 'จ่ายยาและคลังยาย่อย', department_code: '02', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
-  { label: 'การจัดซื้อจัดจ้าง', department_code: '03', icon: FileText, description: 'จัดการระบบใบเสนอราคา การสั่งซื้อ และการจัดจ้าง', accent: 'amber' },
+  { label: 'ผู้ป่วยนอก (OPD)', department_code: '07', icon: Stethoscope, description: 'ระบบจัดการข้อมูล คัดกรอง ตรวจรักษา และส่งต่อผู้ป่วยนอก', accent: 'amber' },
   { label: 'เบิกยืมคืน', department_code: '04', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
   { label: 'ชีวาภิบาล', department_code: '05', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
+  { label: 'ทันตกรรม', department_code: '06', icon: Activity, description: 'ระบบจัดการคลินิกทันตกรรม ประวัติการรักษา และการนัดหมาย', accent: 'rose' },
 ];
 
 const accentMap: Record<string, { border: string; text: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string; btnBg: string; btnBorder: string }> = {
@@ -54,6 +56,7 @@ const accentMap: Record<string, { border: string; text: string; iconBg: string; 
   amber: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-amber-50', iconText: 'text-amber-600', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   indigo: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-indigo-50', iconText: 'text-indigo-600', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   emerald: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
+  rose: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-rose-50', iconText: 'text-rose-600', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
 };
 
 export default function UnifiedPortal() {
@@ -83,6 +86,7 @@ export default function UnifiedPortal() {
       window.location.assign(url); // ใช้ .assign() แทนการใช้ =
     }
   };
+
   /* ======================= UI ======================= */
 
   return (
