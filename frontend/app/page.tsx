@@ -1,111 +1,198 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Session } from '@supabase/supabase-js';
 import {
   Package, Pill, ArrowRightLeft, HeartHandshake, ShieldCheck,
   Shield, Loader2, Lock, ArrowRight, Stethoscope, Activity,
-  MapPin, Globe, Phone, Mail, Facebook
+  MapPin, Globe, Phone, Mail, Facebook, LogOut, Settings, ChevronDown
 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 /* ======================= SSO CONFIG ======================= */
-
 const CLIENTS = {
-  PORTAL: {
-    baseUrl: process.env.NEXT_PUBLIC_URL_PORTAL || "http://localhost:3000"
-  },
-  WAREHOUSE: {
-    baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE || "http://localhost:3001"
-  },
-  PHARMACY: {
-    baseUrl: process.env.NEXT_PUBLIC_URL_PHARMACY || "http://localhost:3002"
-  },
-  CHEEWABHIBALN: {
-    baseUrl: process.env.NEXT_PUBLIC_URL_CHEEWABHIBALN || "http://localhost:3005"
-  }
+  PORTAL: { baseUrl: process.env.NEXT_PUBLIC_URL_ADMIN }, // 3000
+  WAREHOUSE: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE || "https://warehouse.hpk-hms.site/" }, // 3001
+  DISPENSE: { baseUrl: process.env.NEXT_PUBLIC_URL_DISPENSE || "https://dispense.hpk-hms.site/" }, // 3002
+  CHEEWABHIBALN: { baseUrl: process.env.NEXT_PUBLIC_URL_CHEEWABHIBALN || "https://palliative.hpk-hms.site/" } // 3005
 };
 
-const SYSTEMS_MAP: Record<string, { client: typeof CLIENTS[keyof typeof CLIENTS], path: string }> = {
-  "01": { client: CLIENTS.WAREHOUSE, path: "warehouse" },      // คลังหลัก
-  "04": { client: CLIENTS.WAREHOUSE, path: "/borrow-return" },  // เบิกยืมคืน
-  "02": { client: CLIENTS.PHARMACY, path: "/dispense" },        // จ่ายยา
-  "05": { client: CLIENTS.CHEEWABHIBALN, path: "/palliative-care" },// ชีวาภิบาล
-  "07": { client: CLIENTS.PORTAL, path: "/opd-dashboard" },     // ผู้ป่วยนอก (OPD)
-  "06": { client: CLIENTS.PORTAL, path: "/dental-clinic" },     // ทันตกรรม
+type ClientConfig = (typeof CLIENTS)[keyof typeof CLIENTS];
+type SystemConfig = { client: ClientConfig; path: string };
+
+const SYSTEMS_MAP: Record<string, SystemConfig> = {
+  "Administration": { client: CLIENTS.PORTAL, path: "/admin" },
+  "Warehouse": { client: CLIENTS.WAREHOUSE, path: "/warehouse" },
+  "Borrow-Return": { client: CLIENTS.WAREHOUSE, path: "/request" },
+  "Dispense": { client: CLIENTS.DISPENSE, path: "/dispense" },
+  "Palliative": { client: CLIENTS.CHEEWABHIBALN, path: "/palliative-care" },
+  "OPD": { client: CLIENTS.PORTAL, path: "/opd-dashboard" },
+  "Dental": { client: CLIENTS.PORTAL, path: "/dental-clinic" },
 };
 
 /* ======================= UI DATA ======================= */
-
 const departments = [
-  { label: 'คลังหลัก', department_code: '01', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
-  { label: 'จ่ายยาและคลังยาย่อย', department_code: '02', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
-  { label: 'ผู้ป่วยนอก (OPD)', department_code: '07', icon: Stethoscope, description: 'ระบบจัดการข้อมูล คัดกรอง ตรวจรักษา และส่งต่อผู้ป่วยนอก', accent: 'amber' },
-  { label: 'เบิกยืมคืน', department_code: '04', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
-  { label: 'ชีวาภิบาล', department_code: '05', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
-  { label: 'ทันตกรรม', department_code: '06', icon: Activity, description: 'ระบบจัดการคลินิกทันตกรรม ประวัติการรักษา และการนัดหมาย', accent: 'rose' },
+  { label: 'ผู้ป่วยนอก (OPD)', department_code: '01', system_name: 'OPD', icon: Stethoscope, description: 'ระบบจัดการข้อมูล คัดกรอง ตรวจรักษา และส่งต่อผู้ป่วยนอก', accent: 'amber' },
+  { label: 'ทันตกรรม', department_code: '02', system_name: 'Dental', icon: Activity, description: 'ระบบจัดการคลินิกทันตกรรม ประวัติการรักษา และการนัดหมาย', accent: 'rose' },
+  { label: 'ชีวาภิบาล', department_code: '03', system_name: 'Palliative', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
+  { label: 'จ่ายยาและคลังยาย่อย', department_code: '04', system_name: 'Dispense', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
+  { label: 'คลังหลัก', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
+  { label: 'เบิกยืมคืน', department_code: '06', system_name: 'Borrow-Return', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
+  { label: 'ผู้ดูแลระบบ (Admin)', department_code: '99', system_name: 'Administration', icon: Settings, description: 'จัดการสิทธิ์การเข้าใช้งานและตั้งค่าระบบสารสนเทศส่วนกลาง', accent: 'slate' },
 ];
 
-const accentMap: Record<string, { border: string; text: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string; btnBg: string; btnBorder: string }> = {
+type AccentStyle = {
+  border: string;
+  text: string;
+  iconBg: string;
+  iconText: string;
+  badgeBg: string;
+  badgeText: string;
+  btnBg: string;
+  btnBorder: string;
+};
+
+const accentMap: Record<string, AccentStyle> = {
   sky: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-sky-50', iconText: 'text-sky-600', badgeBg: 'bg-sky-100', badgeText: 'text-sky-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   teal: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-teal-50', iconText: 'text-teal-600', badgeBg: 'bg-teal-100', badgeText: 'text-teal-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   amber: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-amber-50', iconText: 'text-amber-600', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   indigo: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-indigo-50', iconText: 'text-indigo-600', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   emerald: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
   rose: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-rose-50', iconText: 'text-rose-600', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
+  slate: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-slate-100', iconText: 'text-slate-600', badgeBg: 'bg-slate-200', badgeText: 'text-slate-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
 };
 
 export default function UnifiedPortal() {
   const router = useRouter();
   const [loadingCode, setLoadingCode] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
 
-  /* ======================= SSO REDIRECT ======================= */
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+    };
+    fetchSession();
 
-const handleDepartmentAction = (deptCode: string) => {
-    const config = SYSTEMS_MAP[deptCode];
-    if (!config || !config.client.baseUrl) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [supabase]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsMenuOpen(false);
+    router.push('/auth/login');
+    router.refresh();
+  };
+
+  const handleDepartmentAction = async (systemName: string, deptCode: string) => {
     setLoadingCode(deptCode);
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-    // 1. ลบเครื่องหมาย / ตัวท้ายสุดของ baseUrl ออก (เผื่อเผลอใส่มาใน .env)
-    const cleanBaseUrl = config.client.baseUrl.replace(/\/$/, '');
-    
-    // 2. เช็คว่า path มี / นำหน้าไหม ถ้าไม่มีให้เติมเข้าไป
-    const cleanPath = config.path.startsWith('/') ? config.path : `/${config.path}`;
+    if (!currentSession) {
+      router.push(`/auth/login`);
+      return;
+    }
 
-    // 3. เอามาประกอบร่างกัน (รับรองว่าได้ URL ที่สมบูรณ์ 100%)
-    const targetUrl = `${cleanBaseUrl}${cleanPath}`;
+    try {
+      const userMeta = currentSession.user.app_metadata;
+      const userAllowedSystems = userMeta?.systems || [];
 
-    if (typeof window !== 'undefined') {
-      window.location.assign(targetUrl);
+      if (userAllowedSystems.includes('Administration') || userAllowedSystems.includes(systemName)) {
+        const config = SYSTEMS_MAP[systemName];
+
+        if (!config) { setLoadingCode(null); return; }
+
+        // ดึง baseUrl มาเช็คก่อน และให้ fallback เป็น string ว่าง
+        const baseUrl = config.client.baseUrl || '';
+
+        if (!baseUrl) {
+          alert(`❌ ไม่พบ URL สำหรับระบบ ${systemName} กรุณาตั้งค่า Environment Variable`);
+          setLoadingCode(null);
+          return;
+        }
+
+        const targetUrl = `${baseUrl.replace(/\/$/, '')}${config.path}`;
+        window.location.assign(targetUrl);
+      } else {
+        alert(`❌ ขออภัย คุณไม่มีสิทธิ์เข้าใช้งานระบบ ${systemName}\nกรุณาติดต่อผู้ดูแลระบบ`);
+        setLoadingCode(null);
+      }
+    } catch (err) {
+      console.error(err);
+      setLoadingCode(null);
     }
   };
-  /* ======================= UI ======================= */
+
+  const displayName = session?.user?.app_metadata?.full_name || session?.user?.email?.split('@')[0] || 'User';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-[#0094d4]/30 selection:text-[#00529a]">
 
-      {/* HERO */}
+      {/* HERO SECTION */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[#00529a] to-[#0094d4] pt-0 pb-36">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
 
-        <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-12">
+        <nav className="relative z-50 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-12">
           <div className="flex items-center gap-4">
-            <div className="flex h-15 w-15 items-center justify-center rounded-xl bg-white shadow-md">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white shadow-md">
               <img src="/logo/logoHPKnobg.png" className="h-full w-full object-contain" alt="Logo" />
             </div>
-            <div className="hidden flex-col sm:flex">
-              <span className="text-base font-extrabold leading-tight tracking-tight text-white">โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม</span>
+            <div className="hidden flex-col sm:flex text-white">
+              <span className="text-base font-extrabold leading-tight tracking-tight">โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม</span>
               <span className="text-[12px] font-bold uppercase text-[#A6E0FF]">Wat Huay Pla Kang Social Welfare Hospital</span>
             </div>
           </div>
 
-          <button
-            // ลิงก์ไปหน้า Login ของโปรเจกต์ Portal ทันที
-            onClick={() => window.location.assign('/auth/login')}
-            className="hidden md:flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white hover:bg-white/20"
-          >
-            <Shield className="h-4 w-4 text-[#A6E0FF]" /> ผู้ดูแลระบบ
-          </button>
+          {/* 🚩 USER MENU DROPDOWN - ปรับตำแหน่งให้ตรงใต้ปุ่ม */}
+          <div className="relative flex items-center" ref={menuRef}>
+            {session ? (
+              <div className="relative">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 pl-2 pr-4 py-1.5 text-sm font-semibold text-white hover:bg-white/20 transition-all shadow-inner"
+                >
+                  <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold shadow-sm border border-white/30 text-xs">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="max-w-[150px] truncate">{displayName}</span>
+                  <ChevronDown className={`h-4 w-4 text-blue-200 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu - แก้เป็น top-full mt-2 เพื่อให้อยู่ใต้ปุ่ม */}
+                {isMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Signed in as</p>
+                      <p className="text-xs font-bold text-slate-700 truncate">{session.user.email}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" /> ออกจากระบบ
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => router.push('/auth/login')}
+                className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-2 text-sm font-bold text-white hover:bg-white/20 transition-all"
+              >
+                <Shield className="h-4 w-4 text-[#A6E0FF]" /> เข้าสู่ระบบ
+              </button>
+            )}
+          </div>
         </nav>
 
         <div className="relative z-20 mx-auto mt-8 max-w-5xl px-6 text-center md:mt-12">
@@ -115,23 +202,23 @@ const handleDepartmentAction = (deptCode: string) => {
           <h1 className="mb-6 text-5xl font-black leading-[1.1] tracking-tight text-white md:text-7xl lg:text-8xl drop-shadow-md">
             ระบบบริหารจัดการ<br />โรงพยาบาล
           </h1>
-          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-blue-50/90 md:text-xl">
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-blue-50/90 md:text-xl font-medium">
             ยกระดับการให้บริการทางการแพทย์ ด้วยระบบสารสนเทศส่วนกลางที่รวดเร็ว และโปร่งใส
           </p>
         </div>
       </div>
 
-      {/* CARDS */}
+      {/* CARDS GRID */}
       <div className="relative z-30 mx-auto -mt-8 max-w-7xl px-6 pb-24 lg:px-12">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {departments.map(({ label, icon: Icon, department_code, description, accent }) => {
+          {departments.map(({ label, icon: Icon, department_code, system_name, description, accent }) => {
             const a = accentMap[accent] || accentMap.sky;
             const isTargetLoading = loadingCode === department_code;
 
             return (
               <div
                 key={department_code}
-                onClick={() => handleDepartmentAction(department_code)}
+                onClick={() => handleDepartmentAction(system_name, department_code)}
                 className={`flex flex-col cursor-pointer overflow-hidden rounded-[1.5rem] border bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${a.border}`}
               >
                 <div className="flex items-start justify-between mb-6">
@@ -145,7 +232,7 @@ const handleDepartmentAction = (deptCode: string) => {
 
                 <div className="flex-1 mb-8">
                   <h3 className={`mb-3 text-xl font-extrabold leading-snug ${a.text}`}>{label}</h3>
-                  <p className="line-clamp-2 text-sm leading-relaxed text-slate-500 font-medium">{description}</p>
+                  <p className="line-clamp-2 text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
                 </div>
 
                 <div className={`mt-auto flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-bold transition-all ${isTargetLoading ? 'bg-slate-100 text-slate-400' : `${a.btnBg} ${a.btnBorder} text-[#0094d4] hover:bg-[#0094d4] hover:text-white`}`}>
@@ -160,20 +247,20 @@ const handleDepartmentAction = (deptCode: string) => {
           })}
         </div>
       </div>
-      
-      {/* FOOTER */}
+
+      {/* FOOTER - ข้อมูลครบถ้วนตามสั่ง */}
       <footer className="bg-slate-900 text-white border-t border-slate-800">
         <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
-            
+
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white p-1">
                   <img src="/logo/logoHPKnobg.png" className="h-full w-full object-contain" alt="Hospital Logo" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-black text-white">โรงพยาบาลวัดห้วยปลากั้ง</h4>
-                  <p className="text-xs font-bold text-[#0094d4] uppercase tracking-wider">Wat Huay Pla Kang Hospital</p>
+                  <h4 className="text-xl font-black text-white leading-none">โรงพยาบาลวัดห้วยปลากั้ง</h4>
+                  <p className="text-[10px] font-bold text-[#0094d4] uppercase tracking-wider mt-1">Wat Huay Pla Kang Hospital</p>
                 </div>
               </div>
               <div className="space-y-4 text-slate-400 max-w-md text-sm leading-relaxed">
@@ -191,12 +278,12 @@ const handleDepartmentAction = (deptCode: string) => {
             <div className="flex flex-col md:items-end space-y-6">
               <h5 className="text-lg font-bold">ติดต่อสอบถาม</h5>
               <div className="space-y-4 text-slate-400 text-sm">
-                <div className="flex items-center gap-3 md:justify-end">
-                  <span className="font-medium text-white">053-150-202</span>
+                <div className="flex items-center gap-3 md:justify-end font-bold text-white">
+                  <span>053-150-202</span>
                   <Phone className="h-5 w-5 text-[#0094d4]" />
                 </div>
-                <div className="flex items-center gap-3 md:justify-end">
-                  <span className="font-medium text-white">info@huayplakang.com</span>
+                <div className="flex items-center gap-3 md:justify-end font-bold text-white">
+                  <span>info@huayplakang.com</span>
                   <Mail className="h-5 w-5 text-[#0094d4]" />
                 </div>
                 <div className="flex items-center gap-4 pt-2 md:justify-end">
@@ -213,8 +300,8 @@ const handleDepartmentAction = (deptCode: string) => {
           </div>
 
           <div className="pt-8 border-t border-slate-800 text-center">
-            <p className="text-slate-500 text-xs font-medium">
-              © {new Date().getFullYear()} โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม — Medical Information System (v1.0.0)
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+              © {new Date().getFullYear()} โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม — MIS v1.0.0
             </p>
           </div>
         </div>
