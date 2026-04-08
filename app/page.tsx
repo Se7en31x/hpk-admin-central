@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import {
   Package, Pill, ArrowRightLeft, HeartHandshake, ShieldCheck,
-  Shield, Loader2, Lock, ArrowRight, Stethoscope, Activity,
+  Shield, ArrowRight, Stethoscope, Activity,
   MapPin, Globe, Phone, Mail, Facebook, LogOut, Settings, ChevronDown
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -54,18 +54,17 @@ type AccentStyle = {
 };
 
 const accentMap: Record<string, AccentStyle> = {
-  sky: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-sky-50', iconText: 'text-sky-600', badgeBg: 'bg-sky-100', badgeText: 'text-sky-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  teal: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-teal-50', iconText: 'text-teal-600', badgeBg: 'bg-teal-100', badgeText: 'text-teal-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  amber: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-amber-50', iconText: 'text-amber-600', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  indigo: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-indigo-50', iconText: 'text-indigo-600', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  emerald: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  rose: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-rose-50', iconText: 'text-rose-600', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
-  slate: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-slate-100', iconText: 'text-slate-600', badgeBg: 'bg-slate-200', badgeText: 'text-slate-700', btnBg: 'bg-white hover:bg-slate-50', btnBorder: 'border-slate-200' },
+  sky: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-sky-50', iconText: 'text-sky-600', badgeBg: 'bg-sky-100', badgeText: 'text-sky-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  teal: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-teal-50', iconText: 'text-teal-600', badgeBg: 'bg-teal-100', badgeText: 'text-teal-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  amber: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-amber-50', iconText: 'text-amber-600', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  indigo: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-indigo-50', iconText: 'text-indigo-600', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  emerald: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  rose: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-rose-50', iconText: 'text-rose-600', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
+  slate: { border: 'border-slate-200 hover:border-[#0094d4]', text: 'text-[#00529a]', iconBg: 'bg-slate-100', iconText: 'text-slate-600', badgeBg: 'bg-slate-200', badgeText: 'text-slate-700', btnBg: 'bg-white', btnBorder: 'border-slate-200' },
 };
 
 export default function UnifiedPortal() {
   const router = useRouter();
-  const [loadingCode, setLoadingCode] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,7 +94,6 @@ export default function UnifiedPortal() {
   };
 
   const handleDepartmentAction = async (systemName: string, deptCode: string) => {
-    setLoadingCode(deptCode);
     const { data: { session: currentSession } } = await supabase.auth.getSession();
 
     if (!currentSession) {
@@ -110,14 +108,12 @@ export default function UnifiedPortal() {
       if (userAllowedSystems.includes('Administration') || userAllowedSystems.includes(systemName)) {
         const config = SYSTEMS_MAP[systemName];
 
-        if (!config) { setLoadingCode(null); return; }
+        if (!config) return;
 
-        // ดึง baseUrl มาเช็คก่อน และให้ fallback เป็น string ว่าง
         const baseUrl = config.client.baseUrl || '';
 
         if (!baseUrl) {
           alert(`❌ ไม่พบ URL สำหรับระบบ ${systemName} กรุณาตั้งค่า Environment Variable`);
-          setLoadingCode(null);
           return;
         }
 
@@ -125,11 +121,9 @@ export default function UnifiedPortal() {
         window.location.assign(targetUrl);
       } else {
         alert(`❌ ขออภัย คุณไม่มีสิทธิ์เข้าใช้งานระบบ ${systemName}\nกรุณาติดต่อผู้ดูแลระบบ`);
-        setLoadingCode(null);
       }
     } catch (err) {
       console.error(err);
-      setLoadingCode(null);
     }
   };
 
@@ -153,7 +147,7 @@ export default function UnifiedPortal() {
             </div>
           </div>
 
-          {/* 🚩 USER MENU DROPDOWN - ปรับตำแหน่งให้ตรงใต้ปุ่ม */}
+          {/* 🚩 USER MENU DROPDOWN */}
           <div className="relative flex items-center" ref={menuRef}>
             {session ? (
               <div className="relative">
@@ -168,7 +162,7 @@ export default function UnifiedPortal() {
                   <ChevronDown className={`h-4 w-4 text-blue-200 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu - แก้เป็น top-full mt-2 เพื่อให้อยู่ใต้ปุ่ม */}
+                {/* Dropdown Menu */}
                 {isMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -213,13 +207,12 @@ export default function UnifiedPortal() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {departments.map(({ label, icon: Icon, department_code, system_name, description, accent }) => {
             const a = accentMap[accent] || accentMap.sky;
-            const isTargetLoading = loadingCode === department_code;
 
             return (
               <div
                 key={department_code}
                 onClick={() => handleDepartmentAction(system_name, department_code)}
-                className={`flex flex-col cursor-pointer overflow-hidden rounded-[1.5rem] border bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${a.border}`}
+                className={`group flex flex-col cursor-pointer overflow-hidden rounded-[1.5rem] border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 active:shadow-sm ${a.border}`}
               >
                 <div className="flex items-start justify-between mb-6">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${a.iconBg}`}>
@@ -230,17 +223,16 @@ export default function UnifiedPortal() {
                   </span>
                 </div>
 
-                <div className="flex-1 mb-8">
+                <div className="flex-1 mb-6">
                   <h3 className={`mb-3 text-xl font-extrabold leading-snug ${a.text}`}>{label}</h3>
                   <p className="line-clamp-2 text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
                 </div>
 
-                <div className={`mt-auto flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-bold transition-all ${isTargetLoading ? 'bg-slate-100 text-slate-400' : `${a.btnBg} ${a.btnBorder} text-[#0094d4] hover:bg-[#0094d4] hover:text-white`}`}>
-                  <span className="flex items-center gap-2">
-                    {isTargetLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-                    {isTargetLoading ? 'กำลังพาวาร์ป...' : 'เข้าสู่ระบบงาน'}
-                  </span>
-                  <ArrowRight className={`h-4 w-4 ${isTargetLoading ? 'hidden' : ''}`} />
+                {/* ปุ่มลูกศรแบบมินิมอล */}
+                <div className="mt-auto flex w-full justify-end">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-300 ${a.btnBg} ${a.btnBorder} text-[#0094d4] group-hover:bg-[#0094d4] group-hover:text-white group-hover:border-[#0094d4]`}>
+                    <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  </div>
                 </div>
               </div>
             );
@@ -248,7 +240,7 @@ export default function UnifiedPortal() {
         </div>
       </div>
 
-      {/* FOOTER - ข้อมูลครบถ้วนตามสั่ง */}
+      {/* FOOTER */}
       <footer className="bg-slate-900 text-white border-t border-slate-800">
         <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">

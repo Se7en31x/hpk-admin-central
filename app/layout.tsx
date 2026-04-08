@@ -1,5 +1,18 @@
+import type { Metadata } from "next"; // เพิ่ม import นี้
 import { Prompt } from "next/font/google";
 import "./globals.css";
+
+// --- เพิ่ม Metadata ตรงนี้ ---
+export const metadata: Metadata = {
+  title: "ระบบบริหารจัดการโรงพยาบาล | HPK-HMS",
+  description: "โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม",
+  icons: {
+    icon: "/logo/logoHPKnobg.png",
+    shortcut: "/logo/logoHPKnobg.png",
+    apple: "/logo/logoHPKnobg.png",
+  },
+};
+// -------------------------
 
 const prompt = Prompt({
   subsets: ["latin", "thai"],
