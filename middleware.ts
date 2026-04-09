@@ -15,43 +15,36 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set(name, value)
+          // 1. เพิ่ม domain เข้าไปใน options เพื่อให้แชร์ข้าม Sub-domain ได้
+          const extendedOptions = { ...options, domain: ".hpk-hms.site" };
+          
+          request.cookies.set({ name, value, ...extendedOptions })
           response = NextResponse.next({
             request: { headers: request.headers },
           })
-          response.cookies.set(name, value, options)
+          response.cookies.set({ name, value, ...extendedOptions })
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set(name, '')
+          // 2. ทำเหมือนกันตอนลบคุกกี้
+          const extendedOptions = { ...options, domain: ".hpk-hms.site" };
+
+          request.cookies.set({ name, value: '', ...extendedOptions })
           response = NextResponse.next({
             request: { headers: request.headers },
           })
-          response.cookies.set(name, '', options)
+          response.cookies.set({ name, value: '', ...extendedOptions })
         },
       },
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // ใช้ getUser() แทน getSession() เพื่อความปลอดภัยสูงสุด (เช็คกับ Server จริง)
+  const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  if (session) {
-    const loginTime = new Date(session.user.last_sign_in_at!).getTime()
-    const isExpired = Date.now() - loginTime > 12 * 60 * 60 * 1000
-
-    if (isExpired) {
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-  }
-
-  const isPublicPage = pathname.startsWith('/login') || pathname === '/'
-
-  if (!session && !isPublicPage) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    redirectUrl.searchParams.set('next', pathname)
-    return NextResponse.redirect(redirectUrl)
+  // 3. ปรับ Logic การ Redirect กลับหน้าหลัก (hpk-hms.site)
+  if (!user && !pathname.startsWith('/login') && pathname !== '/') {
+    return NextResponse.redirect(new URL('https://hpk-hms.site/login', request.url))
   }
 
   return response
