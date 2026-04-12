@@ -6,7 +6,7 @@ import type { Session } from '@supabase/supabase-js';
 import {
   Package, Pill, ArrowRightLeft, HeartHandshake, ShieldCheck,
   Shield, ArrowRight, Stethoscope, Activity,
-  MapPin, Globe, Phone, Mail, Facebook, LogOut, Settings, ChevronDown
+  MapPin, Globe, Phone, Mail, Facebook, LogOut, Settings, ChevronDown, Code
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
@@ -14,18 +14,20 @@ import { createClient } from '@/utils/supabase/client';
 const CLIENTS = {
   PORTAL: { baseUrl: process.env.NEXT_PUBLIC_URL_ADMIN }, // 3000
   WAREHOUSE: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE || "https://warehouse.hpk-hms.site/" }, // 3001
+  WAREHOUSE_DEV: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE_DEV || "https://warehouse-dev.hpk-hms.site/" }, // สำหรับเพื่อน
   DISPENSE: { baseUrl: process.env.NEXT_PUBLIC_URL_DISPENSE || "https://dispense.hpk-hms.site/" }, // 3002
   CHEEWABHIBALN: { baseUrl: process.env.NEXT_PUBLIC_URL_CHEEWABHIBALN || "https://palliative.hpk-hms.site/" } // 3005
 };
 
-type ClientConfig = (typeof CLIENTS)[keyof typeof CLIENTS];
+type ClientConfig = { baseUrl: string | undefined };
 type SystemConfig = { client: ClientConfig; path: string };
 
 const SYSTEMS_MAP: Record<string, SystemConfig> = {
   "Administration": { client: CLIENTS.PORTAL, path: "/admin" },
   "Warehouse": { client: CLIENTS.WAREHOUSE, path: "/warehouse" },
+  "Warehouse-Dev": { client: CLIENTS.WAREHOUSE_DEV, path: "/warehouse" },
   "Borrow-Return": { client: CLIENTS.WAREHOUSE, path: "/request" },
-  "Dispense": { client: CLIENTS.DISPENSE, path: "/dispense" },
+  "Pharmacy": { client: CLIENTS.DISPENSE, path: "/dispense" },
   "Palliative": { client: CLIENTS.CHEEWABHIBALN, path: "/palliative-care" },
   "OPD": { client: CLIENTS.PORTAL, path: "/opd-dashboard" },
   "Dental": { client: CLIENTS.PORTAL, path: "/dental-clinic" },
@@ -36,8 +38,9 @@ const departments = [
   { label: 'ผู้ป่วยนอก (OPD)', department_code: '01', system_name: 'OPD', icon: Stethoscope, description: 'ระบบจัดการข้อมูล คัดกรอง ตรวจรักษา และส่งต่อผู้ป่วยนอก', accent: 'amber' },
   { label: 'ทันตกรรม', department_code: '02', system_name: 'Dental', icon: Activity, description: 'ระบบจัดการคลินิกทันตกรรม ประวัติการรักษา และการนัดหมาย', accent: 'rose' },
   { label: 'ชีวาภิบาล', department_code: '03', system_name: 'Palliative', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
-  { label: 'จ่ายยาและคลังยาย่อย', department_code: '04', system_name: 'Dispense', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
-  { label: 'คลังหลัก', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
+  { label: 'จ่ายยาและคลังยาย่อย', department_code: '04', system_name: 'Pharmacy', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
+  { label: 'คลังหลัก (Production)', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
+  { label: 'คลังหลัก (Development)', department_code: '05-DEV', system_name: 'Warehouse-Dev', icon: Code, description: 'ระบบคลังสินค้าสำหรับพัฒนา (เครื่องเพื่อน/Cloudflare Tunnel)', accent: 'sky' },
   { label: 'เบิกยืมคืน', department_code: '06', system_name: 'Borrow-Return', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
   { label: 'ผู้ดูแลระบบ (Admin)', department_code: '99', system_name: 'Administration', icon: Settings, description: 'จัดการสิทธิ์การเข้าใช้งานและตั้งค่าระบบสารสนเทศส่วนกลาง', accent: 'slate' },
 ];
@@ -105,7 +108,19 @@ export default function UnifiedPortal() {
       const userMeta = currentSession.user.app_metadata;
       const userAllowedSystems = userMeta?.systems || [];
 
-      if (userAllowedSystems.includes('Administration') || userAllowedSystems.includes(systemName)) {
+      // เช็คสิทธิ์แบบรองรับ Object จาก Database
+      const hasPermission = userAllowedSystems.some((sys: any) => {
+        const nameInDb = typeof sys === 'string' ? sys : sys?.name;
+        
+        // ให้สิทธิ์เข้า Dev ได้ถ้ามีสิทธิ์ Warehouse หรือ Administration
+        if (systemName === 'Warehouse-Dev' && (nameInDb === 'Warehouse' || nameInDb === 'Administration')) {
+          return true;
+        }
+        
+        return nameInDb === 'Administration' || nameInDb === systemName;
+      });
+
+      if (hasPermission) {
         const config = SYSTEMS_MAP[systemName];
 
         if (!config) return;

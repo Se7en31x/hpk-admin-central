@@ -29,6 +29,7 @@ type LookupState = {
     subdistricts: SubdistrictLookup[];
 };
 type SystemApiItem = {
+    id: number;
     system_code: string;
     name_th: string | null;
     name_en: string | null;
@@ -42,6 +43,7 @@ type DepartmentApiItem = {
 };
 
 type RoleApiItem = {
+    id: number;
     code: string;
     role_name_th: string | null;
     role_name_en: string | null;
@@ -87,10 +89,10 @@ type CreateFormState = {
     zip_code: string;
     profession_id: string;
     current_maininscl: string;
-    role: string;
+    role_id: string;
     status: 'Active' | 'Disabled' | 'Banned';
-    system: string[];
-    department: string[];
+    system_id: number[];
+    department_id: number[];
 };
 
 const initialForm: CreateFormState = {
@@ -113,10 +115,10 @@ const initialForm: CreateFormState = {
     zip_code: '',
     profession_id: '',
     current_maininscl: '',
-    role: '',
+    role_id: '',
     status: 'Active',
-    system: [],
-    department: [],
+    system_id: [],
+    department_id: [],
 };
 
 const controlledDropdownStyles: StylesConfig<SelectOption, false> = {
@@ -140,7 +142,7 @@ function validateFormBeforeSave(form: CreateFormState): string | null {
     if (form.password.length < 6) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร'; // <-- Supabase บังคับขั้นต่ำ 6 ตัว
     if (!form.firstname_th.trim()) return 'กรุณากรอกชื่อภาษาไทย';
     if (!form.lastname_th.trim()) return 'กรุณากรอกนามสกุลภาษาไทย';
-    if (form.system.length === 0) return 'กรุณาเลือกสิทธิ์การเข้าใช้งานอย่างน้อย 1 ระบบ';
+    if (form.system_id.length === 0) return 'กรุณาเลือกสิทธิ์การเข้าใช้งานอย่างน้อย 1 ระบบ';
 
     if (form.cid.trim() && !/^\d{13}$/.test(form.cid.trim())) return 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก';
     if (form.phone.trim() && !/^\d{9,10}$/.test(form.phone.replace(/[-\s]/g, ''))) return 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก';
@@ -188,9 +190,9 @@ export default function CreateUserPage() {
                 const lookupData = lookupJson?.data;
 
                 setLookups({
-                    systems: (lookupData?.systems || []).map((item: SystemApiItem) => ({ value: item.name_en || item.system_code, label: item.name_th ? `${item.name_th}${item.name_en ? ` (${item.name_en})` : ''}` : (item.name_en || item.system_code) })),
-                    departments: (lookupData?.departments || []).map((item: DepartmentApiItem) => ({ value: item.name_en || item.code || item.name || String(item.id), label: item.name ? `${item.name}${item.name_en ? ` (${item.name_en})` : item.code ? ` (${item.code})` : ''}` : (item.name_en || item.code || `Department ${item.id}`) })),
-                    roles: (lookupData?.roles || []).map((item: RoleApiItem) => ({ value: item.role_name_en || item.code, label: item.role_name_th || item.role_name_en })),
+                    systems: (lookupData?.systems || []).map((item: SystemApiItem) => ({ value: String(item.id), label: item.name_th ? `${item.name_th}${item.name_en ? ` (${item.name_en})` : ''}` : (item.name_en || item.system_code) })),
+                    departments: (lookupData?.departments || []).map((item: DepartmentApiItem) => ({ value: String(item.id), label: item.name ? `${item.name}${item.name_en ? ` (${item.name_en})` : item.code ? ` (${item.code})` : ''}` : (item.name_en || item.code || `Department ${item.id}`) })),
+                    roles: (lookupData?.roles || []).map((item: RoleApiItem) => ({ value: String(item.id), label: item.role_name_th || item.role_name_en })),
                     titles: (lookupData?.titles || []).map((item: TitleApiItem) => ({ value: item.title_code, label: item.short_name || item.name })),
                     sexes: (lookupData?.sexes || []).map((item: SexApiItem) => ({ value: item.sex_code, label: item.sex })),
                     mstatuses: (lookupData?.mstatuses || []).map((item: MStatusApiItem) => ({ value: item.mstatus_code, label: item.mstatus })),
@@ -211,10 +213,11 @@ export default function CreateUserPage() {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    const toggleArrayField = (field: 'system' | 'department', value: string) => {
+    const toggleArrayField = (field: 'system_id' | 'department_id', value: string) => {
+        const numValue = Number(value);
         setForm((prev) => {
-            const exists = prev[field].includes(value);
-            const next = exists ? prev[field].filter((v) => v !== value) : [...prev[field], value];
+            const exists = prev[field].includes(numValue);
+            const next = exists ? prev[field].filter((v) => v !== numValue) : [...prev[field], numValue];
             return { ...prev, [field]: next };
         });
     };
@@ -230,10 +233,14 @@ export default function CreateUserPage() {
             }
 
             // 2. ยิง API ไปที่หลังบ้าน (เช็คพอร์ตให้ตรงกับ Backend ของคุณ เช่น 4000 หรือ 4100)
+            const payload = {
+                ...form,
+                role_id: form.role_id ? Number(form.role_id) : null,
+            };
             const response = await fetch(`${API_BASE_URL}/api/users/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form), // ส่งข้อมูลทั้งหมดในฟอร์มไป
+                body: JSON.stringify(payload),
             });
 
             const result = await response.json();
@@ -315,8 +322,8 @@ export default function CreateUserPage() {
                                     <input
                                         type="checkbox"
                                         className="w-4 h-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
-                                        checked={form.system.includes(s.value)}
-                                        onChange={() => toggleArrayField('system', s.value)}
+                                        checked={form.system_id.includes(Number(s.value))}
+                                        onChange={() => toggleArrayField('system_id', s.value)}
                                     />
                                     <span className="text-xs font-bold text-slate-600 uppercase">{s.label}</span>
                                 </label>
@@ -333,15 +340,15 @@ export default function CreateUserPage() {
                         <div className="p-5 space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium text-slate-700">แผนก</label>
-                                <p className="text-[10px] text-slate-400">เลือกได้หลายแผนก ({form.department.length} รายการ)</p>
+                                <p className="text-[10px] text-slate-400">เลือกได้หลายแผนก ({form.department_id.length} รายการ)</p>
                                 <div className="max-h-64 overflow-y-auto border border-slate-200 rounded p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {lookups.departments.map((item) => (
                                         <label key={item.value} className="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded px-2 py-1.5 hover:bg-slate-100 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 className="w-4 h-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
-                                                checked={form.department.includes(item.value)}
-                                                onChange={() => toggleArrayField('department', item.value)}
+                                                checked={form.department_id.includes(Number(item.value))}
+                                                onChange={() => toggleArrayField('department_id', item.value)}
                                             />
                                             {item.label}
                                         </label>
@@ -352,8 +359,8 @@ export default function CreateUserPage() {
                                 <label className="text-sm font-medium text-slate-700">บทบาทบุคลากร</label>
                                 <Select
                                     options={roleOptions}
-                                    value={roleOptions.find((item) => item.value === form.role) ?? null}
-                                    onChange={(selected: SingleValue<SelectOption>) => updateField('role', selected?.value || '')}
+                                    value={roleOptions.find((item) => item.value === form.role_id) ?? null}
+                                    onChange={(selected: SingleValue<SelectOption>) => updateField('role_id', selected?.value || '')}
                                     placeholder="เลือกบทบาท"
                                     isClearable
                                     menuPlacement="bottom"

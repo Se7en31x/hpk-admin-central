@@ -83,10 +83,10 @@ type ProfileFormState = {
   zip_code: string;
   profession_id: string;
   current_maininscl: string;
-  role: string;
+  role_id: string;
   status: 'Active' | 'Disabled' | 'Banned';
-  system: string[];
-  department: string[];
+  system_id: number[];
+  department_id: number[];
 };
 
 const initialForm: ProfileFormState = {
@@ -107,10 +107,10 @@ const initialForm: ProfileFormState = {
   zip_code: '',
   profession_id: '',
   current_maininscl: '',
-  role: '',
+  role_id: '',
   status: 'Active',
-  system: [],
-  department: [],
+  system_id: [],
+  department_id: [],
 };
 
 const controlledDropdownStyles: StylesConfig<SelectOption, false> = {
@@ -163,8 +163,8 @@ function toNumberOrNull(value: string): number | null {
 function validateFormBeforeSave(form: ProfileFormState): string | null {
   if (!form.firstname_th.trim()) return 'กรุณากรอกชื่อภาษาไทย';
   if (!form.lastname_th.trim()) return 'กรุณากรอกนามสกุลภาษาไทย';
-  if (form.system.length === 0) return 'กรุณาเลือกสิทธิ์การเข้าใช้งานอย่างน้อย 1 ระบบ';
-  if (form.department.length === 0) return 'กรุณาเลือกแผนกอย่างน้อย 1 แผนก';
+  if (form.system_id.length === 0) return 'กรุณาเลือกสิทธิ์การเข้าใช้งานอย่างน้อย 1 ระบบ';
+  if (form.department_id.length === 0) return 'กรุณาเลือกแผนกอย่างน้อย 1 แผนก';
 
   if (form.cid.trim() && !/^\d{13}$/.test(form.cid.trim())) {
     return 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก';
@@ -242,20 +242,20 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         const profile = profileJson?.data;
 
         setLookups({
-          systems: (lookupData?.systems || []).map((item: { system_code: string; name_th: string; name_en: string }) => ({
-            value: item.name_en || item.system_code,
+          systems: (lookupData?.systems || []).map((item: { id: number; system_code: string; name_th: string; name_en: string }) => ({
+            value: String(item.id),
             label: item.name_th
               ? `${item.name_th}${item.name_en ? ` (${item.name_en})` : ''}`
               : (item.name_en || item.system_code),
           })),
           departments: (lookupData?.departments || []).map((item: { id: number; name: string | null; name_en: string | null; code: string | null }) => ({
-            value: item.name_en || item.code || item.name || String(item.id),
+            value: String(item.id),
             label: item.name
               ? `${item.name}${item.name_en ? ` (${item.name_en})` : item.code ? ` (${item.code})` : ''}`
               : (item.name_en || item.code || `Department ${item.id}`),
           })),
           roles: (lookupData?.roles || []).map((item: { id: number; code: string; role_name_th: string; role_name_en: string }) => ({
-            value: item.role_name_en || item.code,
+            value: String(item.id),
             label: item.role_name_th || item.role_name_en,
           })),
           titles: (lookupData?.titles || []).map((item: { title_code: string; name: string; short_name: string | null }) => ({
@@ -293,10 +293,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           zip_code: profile?.zip_code != null ? String(profile.zip_code) : '',
           profession_id: profile?.profession_id || '',
           current_maininscl: profile?.current_maininscl != null ? String(profile.current_maininscl) : '',
-          role: profile?.role || '',
+          role_id: profile?.role_id != null ? String(profile.role_id) : '',
           status: (profile?.status_ === 'Disabled' || profile?.status_ === 'Banned') ? profile.status_ : 'Active',
-          system: Array.isArray(profile?.system) ? profile.system : [],
-          department: Array.isArray(profile?.department) ? profile.department : [],
+          system_id: Array.isArray(profile?.system_id) ? profile.system_id : [],
+          department_id: Array.isArray(profile?.department_id) ? profile.department_id : [],
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
@@ -314,10 +314,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleArrayField = (field: 'system' | 'department', value: string) => {
+  const toggleArrayField = (field: 'system_id' | 'department_id', value: string) => {
+    const numValue = Number(value);
     setForm((prev) => {
-      const exists = prev[field].includes(value);
-      const next = exists ? prev[field].filter((v) => v !== value) : [...prev[field], value];
+      const exists = prev[field].includes(numValue);
+      const next = exists ? prev[field].filter((v) => v !== numValue) : [...prev[field], numValue];
       return { ...prev, [field]: next };
     });
   };
@@ -357,10 +358,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         zip_code: toNumberOrNull(form.zip_code),
         profession_id: form.profession_id || null,
         current_maininscl: toNumberOrNull(form.current_maininscl),
-        role: form.role || null,
+        role_id: form.role_id ? Number(form.role_id) : null,
         status: form.status,
-        system: form.system,
-        department: form.department,
+        system_id: form.system_id,
+        department_id: form.department_id,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/profiles/${id}`, {
@@ -490,8 +491,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-blue-700"
-                    checked={form.system.includes(s.value)}
-                    onChange={() => toggleArrayField('system', s.value)}
+                    checked={form.system_id.includes(Number(s.value))}
+                    onChange={() => toggleArrayField('system_id', s.value)}
                   />
                   <span className="text-xs font-bold text-slate-600 uppercase">{s.label}</span>
                 </label>
@@ -508,15 +509,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">แผนก</label>
-                <p className="text-[10px] text-slate-400">เลือกได้หลายแผนก ({form.department.length} รายการ)</p>
+                <p className="text-[10px] text-slate-400">เลือกได้หลายแผนก ({form.department_id.length} รายการ)</p>
                 <div className="max-h-64 overflow-y-auto border border-slate-200 rounded p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   {lookups.departments.map((item) => (
                     <label key={item.value} className="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded px-2 py-1.5 hover:bg-slate-100">
                       <input
                         type="checkbox"
                         className="w-4 h-4 rounded border-slate-300 text-blue-700"
-                        checked={form.department.includes(item.value)}
-                        onChange={() => toggleArrayField('department', item.value)}
+                        checked={form.department_id.includes(Number(item.value))}
+                        onChange={() => toggleArrayField('department_id', item.value)}
                       />
                       {item.label}
                     </label>
@@ -527,8 +528,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                 <label className="text-sm font-medium text-slate-700">บทบาทบุคลากร</label>
                 <Select
                   options={roleOptions}
-                  value={roleOptions.find((item) => item.value === form.role) ?? null}
-                  onChange={(selected: SingleValue<SelectOption>) => updateField('role', selected?.value || '')}
+                  value={roleOptions.find((item) => item.value === form.role_id) ?? null}
+                  onChange={(selected: SingleValue<SelectOption>) => updateField('role_id', selected?.value || '')}
                   placeholder="เลือกบทบาท"
                   isClearable
                   menuPlacement="bottom"
