@@ -6,7 +6,7 @@ import {
     Search, UserPlus, ChevronRight, ChevronLeft, Key
 } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4100';
 const ITEMS_PER_PAGE = 10; // กำหนดจำนวนรายการต่อหน้า
 
 type ProfileApiItem = {
@@ -89,6 +89,8 @@ export default function UserListPage() {
     const [departmentFilter, setDepartmentFilter] = useState('all');
     const [systemFilter, setSystemFilter] = useState('all');
     const [users, setUsers] = useState<UserRow[]>([]);
+    const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
+    const [systemOptions, setSystemOptions] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -110,16 +112,31 @@ export default function UserListPage() {
                 setLoading(false);
             }
         };
+
+        const fetchLookups = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/lookups/profile-form`);
+                if (!response.ok) return;
+                const result = await response.json();
+                const lookupData = result?.data;
+                
+                if (lookupData?.departments) {
+                    const depts = lookupData.departments.map((d: any) => d.name).filter(Boolean);
+                    setDepartmentOptions(Array.from(new Set(depts as string[])).sort());
+                }
+                if (lookupData?.systems) {
+                    const sys = lookupData.systems.map((s: any) => s.name_th).filter(Boolean);
+                    setSystemOptions(Array.from(new Set(sys as string[])).sort());
+                }
+            } catch (err) {
+                console.error('Failed to fetch lookups', err);
+            }
+        };
+
         fetchProfiles();
+        fetchLookups();
     }, []);
 
-    const departmentOptions = useMemo(() => {
-        return Array.from(new Set(users.flatMap((user) => user.department).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-    }, [users]);
-
-    const systemOptions = useMemo(() => {
-        return Array.from(new Set(users.flatMap((user) => user.system).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-    }, [users]);
 
     // Filter Logic
     const filteredUsers = useMemo(() => {
@@ -129,7 +146,8 @@ export default function UserListPage() {
             const matchesSearch =
                 fullName.includes(q) ||
                 user.email.toLowerCase().includes(q) ||
-                user.department.join(' ').toLowerCase().includes(q);
+                user.department.join(' ').toLowerCase().includes(q) ||
+                user.system.join(' ').toLowerCase().includes(q);
             const matchesStatus = statusFilter === 'all' || user.status.toLowerCase() === statusFilter;
             const matchesDepartment = departmentFilter === 'all' || user.department.includes(departmentFilter);
             const matchesSystem = systemFilter === 'all' || user.system.includes(systemFilter);
@@ -149,13 +167,20 @@ export default function UserListPage() {
         setCurrentPage(1);
     }, [searchTerm, statusFilter, departmentFilter, systemFilter]);
 
-    const renderTags = (items: string[]) => {
+    const renderTags = (items: string[], type: 'dept' | 'sys') => {
         if (items.length === 0) return <span className="text-slate-300">-</span>;
+        
+        const bgColor = type === 'dept' ? 'bg-blue-50' : 'bg-indigo-50';
+        const textColor = type === 'dept' ? 'text-blue-700' : 'text-indigo-700';
+        const borderColor = type === 'dept' ? 'border-blue-100' : 'border-indigo-100';
+
         return (
             <div className="flex items-center gap-1">
-                <span className="truncate max-w-[100px] inline-block">{items[0]}</span>
+                <span className={`truncate max-w-[120px] inline-block text-[11px] px-1.5 py-0.5 rounded border ${bgColor} ${textColor} ${borderColor}`}>
+                    {items[0]}
+                </span>
                 {items.length > 1 && (
-                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-bold">
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded border border-slate-200 font-bold">
                         +{items.length - 1}
                     </span>
                 )}
@@ -271,8 +296,8 @@ export default function UserListPage() {
                                     </td>
                                     <td className="px-3 py-3 text-sm font-normal text-slate-700 truncate">{user.email}</td>
                                     <td className="px-3 py-3 text-sm font-normal text-slate-700 truncate">{user.phone}</td>
-                                    <td className="px-3 py-3 text-sm font-normal text-slate-700">{renderTags(user.department)}</td>
-                                    <td className="px-3 py-3 text-sm font-normal text-slate-700">{renderTags(user.system)}</td>
+                                    <td className="px-3 py-3 text-sm font-normal text-slate-700">{renderTags(user.department, 'dept')}</td>
+                                    <td className="px-3 py-3 text-sm font-normal text-slate-700">{renderTags(user.system, 'sys')}</td>
                                     <td className="px-3 py-3">
                                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border uppercase ${user.role_name === 'Super Admin' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-600 border-slate-100'
                                             }`}>
