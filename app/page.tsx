@@ -15,7 +15,7 @@ const CLIENTS = {
   PORTAL: { baseUrl: process.env.NEXT_PUBLIC_URL_ADMIN }, // 3000
   WAREHOUSE: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE || "https://warehouse.hpk-hms.site/" }, // 3001
   WAREHOUSE_DEV: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE_DEV || "https://warehouse-dev.hpk-hms.site/" }, // สำหรับเพื่อน
-  WAREHOUSE_DEV2: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE_DEV2 || "https://warehouse-dev2.hpk-hms.site/" }, // สำหรับเพื่อน
+  WAREHOUSE_DEV2: { baseUrl: process.env.NEXT_PUBLIC_URL_WAREHOUSE_DEV2 || "https://warehouse-dev-2.hpk-hms.site/" }, // สำหรับเพื่อน
   DISPENSE: { baseUrl: process.env.NEXT_PUBLIC_URL_DISPENSE || "https://dispense.hpk-hms.site/" }, // 3002
   CHEEWABHIBALN: { baseUrl: process.env.NEXT_PUBLIC_URL_CHEEWABHIBALN || "https://palliative.hpk-hms.site/" } // 3005
 };
@@ -41,7 +41,7 @@ const departments = [
   { label: 'ทันตกรรม', department_code: '02', system_name: 'Dental', icon: Activity, description: 'ระบบจัดการคลินิกทันตกรรม ประวัติการรักษา และการนัดหมาย', accent: 'rose' },
   { label: 'ชีวาภิบาล', department_code: '03', system_name: 'Palliative', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
   { label: 'จ่ายยาและคลังยาย่อย', department_code: '04', system_name: 'Pharmacy', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
-  { label: 'คลังหลัก (Production)', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
+  { label: 'คลังหลัก', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
   { label: 'คลังหลัก (Development)', department_code: '05-DEV', system_name: 'Warehouse-Dev', icon: Code, description: 'ระบบคลังสินค้าสำหรับพัฒนา (เครื่องเพื่อน/Cloudflare Tunnel)', accent: 'sky' },
   { label: 'คลังหลัก (Development 2)', department_code: '05-DEV2', system_name: 'Warehouse-Dev2', icon: Code, description: 'ระบบคลังสินค้าสำหรับพัฒนา (สำรอง)', accent: 'sky' },
   { label: 'เบิกยืมคืน', department_code: '06', system_name: 'Borrow-Return', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
