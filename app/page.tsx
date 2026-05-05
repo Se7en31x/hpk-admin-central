@@ -26,8 +26,6 @@ type SystemConfig = { client: ClientConfig; path: string };
 const SYSTEMS_MAP: Record<string, SystemConfig> = {
   "Administration": { client: CLIENTS.PORTAL, path: "/admin" },
   "Warehouse": { client: CLIENTS.WAREHOUSE, path: "/warehouse" },
-  "Warehouse-Dev": { client: CLIENTS.WAREHOUSE_DEV, path: "/warehouse" },
-  "Warehouse-Dev2": { client: CLIENTS.WAREHOUSE_DEV2, path: "/warehouse" },
   "Borrow-Return": { client: CLIENTS.WAREHOUSE, path: "/request" },
   "Pharmacy": { client: CLIENTS.DISPENSE, path: "/dispense" },
   "Palliative": { client: CLIENTS.CHEEWABHIBALN, path: "/" },
@@ -42,9 +40,6 @@ const departments = [
   { label: 'ชีวาภิบาล', department_code: '03', system_name: 'Palliative', icon: HeartHandshake, description: 'ดูแลและจัดการข้อมูลผู้ป่วยระยะท้ายแบบประคับประคอง', accent: 'indigo' },
   { label: 'จ่ายยาและคลังยาย่อย', department_code: '04', system_name: 'Pharmacy', icon: Pill, description: 'จัดการคลังยาย่อยและระบบการจ่ายยาให้ผู้ป่วย', accent: 'teal' },
   { label: 'คลังหลัก', department_code: '05', system_name: 'Warehouse', icon: Package, description: 'บริหารจัดการสต็อกเวชภัณฑ์และอุปกรณ์การแพทย์ส่วนกลาง', accent: 'emerald' },
-  { label: 'คลังหลัก (Development)', department_code: '05-DEV', system_name: 'Warehouse-Dev', icon: Code, description: 'ระบบคลังสินค้าสำหรับพัฒนา (เครื่องเพื่อน/Cloudflare Tunnel)', accent: 'sky' },
-  { label: 'คลังหลัก (Development 2)', department_code: '05-DEV2', system_name: 'Warehouse-Dev2', icon: Code, description: 'ระบบคลังสินค้าสำหรับพัฒนา (สำรอง)', accent: 'sky' },
-  { label: 'เบิกยืมคืน', department_code: '06', system_name: 'Borrow-Return', icon: ArrowRightLeft, description: 'บันทึกและติดตามการเบิก ยืม หรือคืนอุปกรณ์ต่างๆ อย่างเป็นระบบ', accent: 'sky' },
   { label: 'ผู้ดูแลระบบ (Admin)', department_code: '99', system_name: 'Administration', icon: Settings, description: 'จัดการสิทธิ์การเข้าใช้งานและตั้งค่าระบบสารสนเทศส่วนกลาง', accent: 'slate' },
 ];
 
