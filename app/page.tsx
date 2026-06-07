@@ -151,12 +151,12 @@ export default function UnifiedPortal() {
 
         <nav className="relative z-50 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-12">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white shadow-md">
+            <div className="flex h-[114px] w-[114px] items-center justify-center transition-transform duration-300 hover:scale-105">
               <img src="/logo/logoHPKnobg.png" className="h-full w-full object-contain" alt="Logo" />
             </div>
             <div className="hidden flex-col sm:flex text-white">
-              <span className="text-base font-extrabold leading-tight tracking-tight">โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม</span>
-              <span className="text-[12px] font-bold uppercase text-[#A6E0FF]">Wat Huay Pla Kang Social Welfare Hospital</span>
+              <span className="text-xl md:text-2xl font-extrabold leading-tight tracking-tight">โรงพยาบาลวัดห้วยปลากั้งเพื่อสังคม</span>
+              <span className="text-xs md:text-sm font-bold uppercase text-[#A6E0FF] mt-1 tracking-wider">Wat Huay Pla Kang Social Welfare Hospital</span>
             </div>
           </div>
 

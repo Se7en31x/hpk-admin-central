@@ -12,7 +12,7 @@ export const createClient = () =>
       },
       // --- เพิ่มส่วนนี้เข้าไปครับ ---
       cookieOptions: {
-        domain: ".hpk-hms.site", 
+        ...(process.env.NODE_ENV === "production" ? { domain: ".hpk-hms.site" } : {}),
         path: "/",
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production", // ใช้ true บน Vercel

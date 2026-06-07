@@ -2,6 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const isDev = process.env.NODE_ENV === 'development' || request.nextUrl.hostname === 'localhost' || request.nextUrl.hostname === '127.0.0.1';
+
   let response = NextResponse.next({
     request: { headers: request.headers },
   })
@@ -16,7 +18,10 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           // 1. เพิ่ม domain เข้าไปใน options เพื่อให้แชร์ข้าม Sub-domain ได้
-          const extendedOptions = { ...options, domain: ".hpk-hms.site" };
+          const extendedOptions = { ...options };
+          if (!isDev) {
+            extendedOptions.domain = ".hpk-hms.site";
+          }
           
           request.cookies.set({ name, value, ...extendedOptions })
           response = NextResponse.next({
@@ -26,7 +31,10 @@ export async function middleware(request: NextRequest) {
         },
         remove(name: string, options: CookieOptions) {
           // 2. ทำเหมือนกันตอนลบคุกกี้
-          const extendedOptions = { ...options, domain: ".hpk-hms.site" };
+          const extendedOptions = { ...options };
+          if (!isDev) {
+            extendedOptions.domain = ".hpk-hms.site";
+          }
 
           request.cookies.set({ name, value: '', ...extendedOptions })
           response = NextResponse.next({
@@ -44,7 +52,10 @@ export async function middleware(request: NextRequest) {
 
   // 3. ปรับ Logic การ Redirect กลับหน้าหลัก (hpk-hms.site)
   if (!user && !pathname.startsWith('/login') && pathname !== '/') {
-    return NextResponse.redirect(new URL('https://hpk-hms.site/login', request.url))
+    const redirectUrl = isDev 
+      ? new URL('/login', request.url) 
+      : new URL('https://hpk-hms.site/login', request.url);
+    return NextResponse.redirect(redirectUrl)
   }
 
   return response
